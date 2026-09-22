@@ -1,0 +1,10 @@
+{
+  "description": "Organize tasks, manage time with Pomodoro, track events, and boost productivity using proven methods like Eisenhower Matrix and Parkinson's Law.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
