@@ -11,13 +11,18 @@ export default function TopSixScreen({ navigate }: Props) {
   const { tasks, updateTask, addTask } = useStore();
   const [showPicker, setShowPicker] = useState(false);
   const [scheduleTask, setScheduleTask] = useState<number | null>(null);
+  const [planDay, setPlanDay] = useState<"today" | "tomorrow">("today");
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const selectedDate = (planDay === "today" ? today : tomorrow).toISOString().slice(0, 10);
 
   const top6 = tasks
-    .filter(t => t.inTopSix)
+    .filter(t => t.inTopSix && (t.topSixDate || t.deadline || today.toISOString().slice(0, 10)) === selectedDate)
     .sort((a, b) => a.topSixOrder - b.topSixOrder)
     .slice(0, 6);
 
-  const available = tasks.filter(t => !t.inTopSix && !t.done);
+  const available = tasks.filter(t => (!t.inTopSix || t.topSixDate !== selectedDate) && !t.done);
 
   const toggle = (id: number, done: boolean) => updateTask(id, { done });
 
@@ -42,13 +47,14 @@ export default function TopSixScreen({ navigate }: Props) {
   const addExisting = (id: number) => {
     const count = top6.length;
     if (count >= 6) return;
-    updateTask(id, { inTopSix: true, topSixOrder: count + 1 });
+    updateTask(id, { inTopSix: true, topSixOrder: count + 1, topSixDate: selectedDate, deadline: selectedDate });
     setShowPicker(false);
   };
 
   const addNew = (text: string) => {
     if (top6.length >= 6) return;
-    addTask(text, { inTopSix: true, topSixOrder: top6.length + 1 });
+    if (tasks.some(task => task.text.trim().toLowerCase() === text.trim().toLowerCase())) return;
+    addTask(text, { inTopSix: true, topSixOrder: top6.length + 1, topSixDate: selectedDate, deadline: selectedDate });
     setShowPicker(false);
   };
 
@@ -108,6 +114,13 @@ export default function TopSixScreen({ navigate }: Props) {
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Lista das 6 Tarefas</h1>
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 18 }}>Método Ivy Lee — 6 tarefas, em ordem de prioridade.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, background: "var(--muted)", borderRadius: 10, padding: 3, marginBottom: 14 }}>
+          {(["today", "tomorrow"] as const).map(day => (
+            <button key={day} onClick={() => setPlanDay(day)} style={{ border: "none", borderRadius: 8, padding: "8px", background: planDay === day ? "var(--primary)" : "transparent", color: planDay === day ? "white" : "var(--muted-foreground)", cursor: "pointer", fontFamily: "'DM Mono', monospace", fontSize: 10 }}>
+              {day === "today" ? "HOJE" : "PLANEJAR AMANHÃ"}
+            </button>
+          ))}
+        </div>
 
         {/* Progress */}
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 16, marginBottom: 16 }}>

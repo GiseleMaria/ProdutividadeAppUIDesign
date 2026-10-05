@@ -13,13 +13,15 @@ export default function RouletteScreen({ navigate }: Props) {
   const [input, setInput] = useState("");
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [removeDrawn, setRemoveDrawn] = useState(false);
+  const [excluded, setExcluded] = useState<string[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentRotRef = useRef(0);
 
   // Roulette items from pending tasks (not done)
   const pendingTasks = tasks.filter(t => !t.done);
   const [customItems, setCustomItems] = useState<string[]>([]);
-  const allItems = [...pendingTasks.map(t => t.text), ...customItems];
+  const allItems = [...pendingTasks.map(t => t.text), ...customItems].filter(item => !excluded.includes(item));
   const SIZE = 280;
   const cx = SIZE / 2, cy = SIZE / 2, R = SIZE / 2 - 8;
 
@@ -62,7 +64,9 @@ export default function RouletteScreen({ navigate }: Props) {
         const norm = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
         const sliceAngle = (2 * Math.PI) / allItems.length;
         const pointerAngle = (Math.PI * 2 - norm + Math.PI * 1.5) % (Math.PI * 2);
-        setResult(allItems[Math.floor(pointerAngle / sliceAngle) % allItems.length]);
+        const selected = allItems[Math.floor(pointerAngle / sliceAngle) % allItems.length];
+        setResult(selected);
+        if (removeDrawn) setTimeout(() => setExcluded(previous => [...previous, selected]), 500);
       }
     };
     requestAnimationFrame(animate);
@@ -88,6 +92,10 @@ export default function RouletteScreen({ navigate }: Props) {
       </div>
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Roleta de Decisão</h1>
       <p style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 24 }}>Muitas tarefas, sem saber por onde começar? Gire.</p>
+      <label style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 18, color: "var(--muted-foreground)", fontSize: 12, cursor: "pointer" }}>
+        <input type="checkbox" checked={removeDrawn} onChange={event => setRemoveDrawn(event.target.checked)} />
+        Remover opções depois de sorteadas
+      </label>
 
       {/* Wheel */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>

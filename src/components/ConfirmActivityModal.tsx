@@ -6,15 +6,18 @@ export interface ActivityData {
   time: string;
   notes: string;
   addToTopSix: boolean;
+  type: "task" | "reminder" | "event";
 }
 
 interface Props {
   initialTitle: string;
   onConfirm: (data: ActivityData) => void;
   onCancel: () => void;
+  initialType?: "task" | "reminder" | "event";
+  allowTypeChange?: boolean;
 }
 
-export default function ConfirmActivityModal({ initialTitle, onConfirm, onCancel }: Props) {
+export default function ConfirmActivityModal({ initialTitle, onConfirm, onCancel, initialType = "task", allowTypeChange = false }: Props) {
   const today = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
@@ -25,6 +28,7 @@ export default function ConfirmActivityModal({ initialTitle, onConfirm, onCancel
   const [time, setTime] = useState(nowTime);
   const [notes, setNotes] = useState("");
   const [addToTopSix, setAddToTopSix] = useState(false);
+  const [type, setType] = useState(initialType);
 
   const isToday = date === todayStr;
 
@@ -61,6 +65,18 @@ export default function ConfirmActivityModal({ initialTitle, onConfirm, onCancel
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {allowTypeChange && (
+            <div>
+              <label style={labelStyle}>Tipo</label>
+              <div className="segmented">
+                {(["task", "reminder", "event"] as const).map(value => (
+                  <button type="button" className={type === value ? "active" : ""} onClick={() => setType(value)} key={value}>
+                    {value === "task" ? "Tarefa" : value === "reminder" ? "Lembrete" : "Evento"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Title */}
           <div>
             <label style={labelStyle}>Título</label>
@@ -172,7 +188,7 @@ export default function ConfirmActivityModal({ initialTitle, onConfirm, onCancel
         </div>
 
         <button
-          onClick={() => onConfirm({ title, date, time, notes, addToTopSix })}
+          onClick={() => onConfirm({ title, date, time, notes, addToTopSix, type })}
           disabled={!title.trim()}
           style={{
             marginTop: 20,

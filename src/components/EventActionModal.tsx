@@ -1,20 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 
 export interface CalEvent {
+  id: number;
   day: number;
+  month: number;
+  year: number;
   title: string;
   time: string;
   color: string;
   notes?: string;
+  type: "event" | "activity";
+  routineId?: number;
 }
 
 interface Props {
   event: CalEvent;
   onClose: () => void;
-  onSave: (updated: CalEvent) => void;
+  initialKind?: "task" | "reminder" | "event";
+  onSave: (updated: CalEvent & { itemKind: "task" | "reminder" | "event" }) => void;
+  onDelete?: () => void;
+  onComplete?: () => void;
 }
 
-export default function EventActionModal({ event, onClose, onSave }: Props) {
+export default function EventActionModal({ event, onClose, onSave, onDelete, onComplete, initialKind = "event" }: Props) {
   const [mode, setMode] = useState<"choose" | "timer" | "edit">("choose");
 
   // Timer state
@@ -31,13 +39,13 @@ export default function EventActionModal({ event, onClose, onSave }: Props) {
     if (timerRunning) {
       intervalRef.current = setInterval(() => {
         setTimerSecs(s => {
-          if (s <= 1) { clearInterval(intervalRef.current!); setTimerRunning(false); setTimerDone(true); return 0; }
+          if (s <= 1) { clearInterval(intervalRef.current!); setTimerRunning(false); setTimerDone(true); onComplete?.(); return 0; }
           return s - 1;
         });
       }, 1000);
     } else if (intervalRef.current) clearInterval(intervalRef.current);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [timerRunning]);
+  }, [timerRunning, onComplete]);
 
   const startTimer = () => { setTimerSecs(timerMins * 60); setTimerDone(false); setTimerRunning(true); };
   const resetTimer = () => { setTimerRunning(false); setTimerSecs(0); setTimerDone(false); };
@@ -49,6 +57,8 @@ export default function EventActionModal({ event, onClose, onSave }: Props) {
   const [title, setTitle] = useState(event.title);
   const [time, setTime] = useState(event.time);
   const [notes, setNotes] = useState(event.notes ?? "");
+  const [date, setDate] = useState(`${event.year}-${String(event.month + 1).padStart(2, "0")}-${String(event.day).padStart(2, "0")}`);
+  const [itemKind, setItemKind] = useState<"task" | "reminder" | "event">(initialKind);
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1100, backdropFilter: "blur(6px)" }}>
@@ -91,6 +101,14 @@ export default function EventActionModal({ event, onClose, onSave }: Props) {
                 <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Altere título, hora ou adicione notas</p>
               </div>
             </button>
+            {onDelete && (
+              <button
+                onClick={() => { onDelete(); onClose(); }}
+                style={{ padding: "13px", borderRadius: 12, border: "1px solid rgba(241,120,120,0.35)", background: "rgba(241,120,120,0.08)", color: "#f17878", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+              >
+                Excluir
+              </button>
+            )}
           </div>
         )}
 
@@ -147,12 +165,20 @@ export default function EventActionModal({ event, onClose, onSave }: Props) {
                 <label style={labelStyle}>Hora</label>
                 <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} onFocus={e => (e.target.style.borderColor = "var(--primary)")} onBlur={e => (e.target.style.borderColor = "var(--border)")} />
               </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div><label style={labelStyle}>Data</label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inputStyle, colorScheme: "dark" }} /></div>
+                <div><label style={labelStyle}>Tipo</label><select value={itemKind} onChange={e => setItemKind(e.target.value as typeof itemKind)} style={inputStyle}><option value="task">Tarefa</option><option value="reminder">Lembrete</option><option value="event">Evento</option></select></div>
+              </div>
               <div>
                 <label style={labelStyle}>Notas</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Detalhes..." rows={3} style={{ ...inputStyle, resize: "none" }} onFocus={e => (e.target.style.borderColor = "var(--primary)")} onBlur={e => (e.target.style.borderColor = "var(--border)")} />
               </div>
               <button
-                onClick={() => { onSave({ ...event, title, time, notes }); onClose(); }}
+                onClick={() => {
+                  const [year, month, day] = date.split("-").map(Number);
+                  onSave({ ...event, title, time, notes, day, month: month - 1, year, itemKind });
+                  onClose();
+                }}
                 style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "var(--primary)", color: "white", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
               >
                 Salvar alterações

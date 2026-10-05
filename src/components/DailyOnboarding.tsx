@@ -2,10 +2,11 @@ import { useState } from "react";
 
 interface Props {
   onComplete: (tasks: string[]) => void;
+  initialTasks?: string[];
 }
 
-export default function DailyOnboarding({ onComplete }: Props) {
-  const [tasks, setTasks] = useState<string[]>(["", "", "", "", "", ""]);
+export default function DailyOnboarding({ onComplete, initialTasks = [] }: Props) {
+  const [tasks, setTasks] = useState<string[]>(() => [...initialTasks.slice(0, 6), "", "", "", "", "", ""].slice(0, 6));
   const [step, setStep] = useState<"intro" | "tasks">("intro");
 
   const update = (i: number, val: string) => setTasks(t => t.map((x, j) => j === i ? val : x));

@@ -137,7 +137,7 @@ export default function PomodoroScreen({ navigate }: Props) {
             <span style={{ fontSize: 13 }}>{item.label}</span>
             {editing === item.key ? (
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <input type="number" defaultValue={item.val} autoFocus onBlur={e => applyTime(item.key, Number(e.target.value))} onKeyDown={e => e.key === "Enter" && applyTime(item.key, Number((e.target as HTMLInputElement).value))} style={{ width: 56, background: "var(--muted)", border: "1px solid var(--primary)", borderRadius: 6, padding: "4px 8px", color: "var(--foreground)", fontFamily: "'DM Mono', monospace", fontSize: 13, textAlign: "center", outline: "none" }} />
+                <input type="number" min={1} max={90} defaultValue={item.val} autoFocus onInput={e => { if (Number(e.currentTarget.value) < 0) e.currentTarget.value = "1"; }} onBlur={e => applyTime(item.key, Number(e.target.value))} onKeyDown={e => e.key === "Enter" && applyTime(item.key, Number((e.target as HTMLInputElement).value))} style={{ width: 56, background: "var(--muted)", border: "1px solid var(--primary)", borderRadius: 6, padding: "4px 8px", color: "var(--foreground)", fontFamily: "'DM Mono', monospace", fontSize: 13, textAlign: "center", outline: "none" }} />
                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: "var(--muted-foreground)" }}>min</span>
               </div>
             ) : (

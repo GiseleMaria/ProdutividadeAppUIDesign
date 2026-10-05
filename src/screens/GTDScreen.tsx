@@ -3,6 +3,7 @@ import { Screen } from "../App";
 import { useStore, GTDBucket } from "../store";
 import BackButton from "../components/BackButton";
 import HelpTooltip from "../components/HelpTooltip";
+import ConfirmActivityModal, { ActivityData } from "../components/ConfirmActivityModal";
 
 interface Props { navigate: (s: Screen) => void; }
 
@@ -15,7 +16,7 @@ const BUCKETS: { key: GTDBucket; label: string; icon: string; color: string; des
 ];
 
 export default function GTDScreen({ navigate }: Props) {
-  const { tasks, addTask, updateTask, removeTask } = useStore();
+  const { tasks, addTask, updateTask, removeTask, addEvent } = useStore();
   const [input, setInput] = useState("");
   const [expanded, setExpanded] = useState<GTDBucket | "">("inbox");
   const [createTaskId, setCreateTaskId] = useState<number | null>(null);
@@ -29,9 +30,24 @@ export default function GTDScreen({ navigate }: Props) {
 
   const moveTo = (id: number, bucket: GTDBucket) => updateTask(id, { gtdBucket: bucket, done: bucket === "done" });
 
-  const promoteToTask = (id: number) => {
-    // Mark it as a "real" tracked task: add to top 6 eligible, set quadrant
-    updateTask(id, { quadrant: "schedule", inTopSix: false });
+  const promoteToTask = (id: number, data: ActivityData) => {
+    if (data.type === "event") {
+      const date = new Date(`${data.date}T12:00:00`);
+      addEvent({ day: date.getDate(), month: date.getMonth(), year: date.getFullYear(), title: data.title, time: data.time, notes: data.notes, color: "#7c6af7", type: "event" });
+      removeTask(id);
+      setCreateTaskId(null);
+      return;
+    }
+    updateTask(id, {
+      text: data.title,
+      deadline: data.date,
+      time: data.time,
+      quadrant: "schedule",
+      inTopSix: data.addToTopSix,
+      topSixOrder: data.addToTopSix ? tasks.filter(task => task.inTopSix && task.topSixDate === data.date).length + 1 : 0,
+      topSixDate: data.addToTopSix ? data.date : undefined,
+      kind: data.type,
+    });
     setCreateTaskId(null);
   };
 
@@ -44,24 +60,13 @@ export default function GTDScreen({ navigate }: Props) {
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Método GTD</h1>
       <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 18 }}>Getting Things Done — capture, clarifique, organize.</p>
 
-      {/* Promote modal */}
       {createTaskId !== null && (
-        <div onClick={() => setCreateTaskId(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24, backdropFilter: "blur(6px)" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16, padding: 28, maxWidth: 340, width: "100%" }}>
-            <div style={{ fontSize: 28, marginBottom: 12 }}>✦</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Criar tarefa no sistema</h3>
-            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 4 }}>
-              <strong style={{ color: "var(--foreground)" }}>"{tasks.find(t => t.id === createTaskId)?.text}"</strong>
-            </p>
-            <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 20 }}>
-              Será adicionada ao Eisenhower (quadrante Agendar) e ficará disponível em todos os outros métodos.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => { promoteToTask(createTaskId); }} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "var(--primary)", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✦ Criar tarefa</button>
-              <button onClick={() => setCreateTaskId(null)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "1px solid var(--border)", background: "transparent", color: "var(--foreground)", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmActivityModal
+          initialTitle={tasks.find(task => task.id === createTaskId)?.text || ""}
+          allowTypeChange
+          onCancel={() => setCreateTaskId(null)}
+          onConfirm={data => promoteToTask(createTaskId, data)}
+        />
       )}
 
       {/* Quick capture */}
